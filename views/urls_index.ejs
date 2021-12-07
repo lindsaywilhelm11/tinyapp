@@ -9,6 +9,8 @@
   <title>TinyApp</title>
 </head>
 <body>
+    
+    <%- include('partials/_header') %>
   <main style="margin: 1em;">
     <h3>My URLs</h3>
     <table class="table">
@@ -23,8 +25,9 @@
           <tr>
             <td><%= url %></td>
             <td><%= urls[url] %></td>
-            <td><a>href='#'</a></td>
+            <td><a href='#'></a></td>
           </tr>
+          
         <% } %>
       </tbody>
     </table>
