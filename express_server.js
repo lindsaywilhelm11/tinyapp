@@ -31,13 +31,19 @@ app.get("/urls.json", (req, res) => {
   });
 
   app.get("/urls/:shortURL", (req, res) => {
-    const templateVars = { shortURL: req.params.shortURL, longURL: req.body.longURL};
+    const templateVars = { shortURL: generateRandomString(), longURL: req.params.longURL};
     res.render("urls_show", templateVars);
+    
   });  
+
+  app.get("/u/:shortURL", (req, res) => {
+      const longURL = { longURL: req.params.longURL }
+    res.redirect(longURL)
+  })
 
   app.post("/urls", (req, res) => {
     console.log(req.body);  
-    res.send("Ok");         
+    res.redirect('/urls/:shortURL');         
   });
 
 app.listen(PORT, () => {
