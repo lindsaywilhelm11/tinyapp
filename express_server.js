@@ -26,6 +26,11 @@ const users = {
         id: "user2RandomID",
         email: "user2@example.com",
         password: "dishwasher-funk"
+    },
+    "user3RandomID": {
+        id: "user3RandomID",
+        email: "lindsaywilhelm11@gmail.com",
+        password: "123"
     }
 }
 
@@ -43,6 +48,24 @@ const findUserByEmail = (email) => {
 app.get("/", (req, res) => {
   res.send("Hello!");
 });
+
+app.get('/login', (req, res) => {
+    const templateVars = {
+        user: users[req.cookies["user_id"]],
+        email: req.body.email,
+        password: req.body.password
+    }
+    res.render('urls_login', templateVars)
+})
+
+app.get("/register", (req, res) => {
+    const templateVars = {
+        user: users[req.cookies["user_id"]],
+        email: req.body.email,
+        password: req.body.password
+    }
+    res.render('urls_register', templateVars)
+})
 
 app.get("/urls", (req, res) => {
     const templateVars = { 
@@ -73,15 +96,6 @@ app.get("/urls.json", (req, res) => {
     res.redirect(urlDatabase[longURL])
   })
 
-  app.get("/register", (req, res) => {
-    const templateVars = {
-        user: users[req.cookies["user_id"]],
-        email: req.body.email,
-        password: req.body.password
-    }
-    res.render('urls_register', templateVars)
-})
-
 // POST REQUESTS
 
   app.post("/urls", (req, res) => {
@@ -102,8 +116,26 @@ app.get("/urls.json", (req, res) => {
   })
 
   app.post("/login", (req, res) => {
-    let templateVars = { user: users[req.cookies["user_id"]] }
-    res.cookie('user_id', templateVars)
+    console.log('req.body', req.body)
+  const email = req.body.email;
+  const password = req.body.password;
+
+  if (!email || !password) {
+    return res.status(400).send("Invalid email or password!")
+  }
+
+  const user = findUserByEmail(email);
+  console.log('user', user);
+  
+  if (!user) {
+    return res.status(400).send("Email does not exist!")
+  }
+
+  if (user.password !== password ){
+    return res.status(400).send('Invalid password!');
+  }
+
+  res.cookie('user_id', user.id)
     res.redirect("/urls")
   })
 
