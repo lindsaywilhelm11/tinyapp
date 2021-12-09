@@ -11,9 +11,9 @@ app.use(cookieParser());
 app.set("view engine", "ejs");
 
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com",
-  "lnw11": "http://www.lindsaynwilhelm.xyz/"
+  "b2xVn2": "https://www.lighthouselabs.ca",
+  "9sm5xK": "https://www.google.ca",
+  "lnw11": "http://www.lindsaynwilhelm.xyz"
 };
 
 const users = {
@@ -79,13 +79,14 @@ app.get("/urls.json", (req, res) => {
   });  
 
   app.get("/urls/new", (req, res) => {
-    res.render("urls_new");
+    let templateVars = { user: users[req.cookies.user_id]  }
+    res.render("urls_new", templateVars);
   });
 
   app.get("/urls/:shortURL", (req, res) => {
     const templateVars = { 
-        user: users[req.cookies.user_id],
-        shortURL: generateRandomString(),
+        user: users[req.cookies["user_id"]],
+        shortURL: req.params.shortURL, 
         longURL: urlDatabase[req.params.shortURL] };
     res.render("urls_show", templateVars);
     
@@ -93,7 +94,7 @@ app.get("/urls.json", (req, res) => {
 
   app.get("/u/:shortURL", (req, res) => {
     const longURL = urlDatabase[req.params.shortURL];
-    res.redirect(urlDatabase[longURL])
+    res.redirect(longURL)
   })
 
 // POST REQUESTS
@@ -128,20 +129,20 @@ app.get("/urls.json", (req, res) => {
   console.log('user', user);
   
   if (!user) {
-    return res.status(400).send("Email does not exist!")
+    return res.status(403).send("Email does not exist!")
   }
 
   if (user.password !== password ){
-    return res.status(400).send('Invalid password!');
+    return res.status(403).send('Invalid password!');
   }
 
-  res.cookie('user_id', user.id)
+    res.cookie('user_id', user.id)
     res.redirect("/urls")
   })
 
   app.post('/logout', (req, res) => {
       res.clearCookie('user_id');
-      res.redirect('/urls');
+      res.redirect('/login');
   })
 
   app.post('/register', (req, res) => {
@@ -165,7 +166,6 @@ app.get("/urls.json", (req, res) => {
         email: newEmail,
         password: newPassword
       }
-      
 
       let templateVars = { user: users[req.cookies["user_id"]] };
       res.render('/urls_register', templateVars)
