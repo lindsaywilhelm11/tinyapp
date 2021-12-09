@@ -11,9 +11,18 @@ app.use(cookieParser());
 app.set("view engine", "ejs");
 
 const urlDatabase = {
-  "b2xVn2": "https://www.lighthouselabs.ca",
-  "9sm5xK": "https://www.google.ca",
-  "lnw11": "http://www.lindsaynwilhelm.xyz"
+  "b2xVn2": { 
+    longURL: "https://www.lighthouselabs.ca",
+    userID: "1A"
+    },
+  "9sm5xK": { 
+    longURL: "https://www.google.ca",
+    userID: "2B"
+        },
+  "lnw11":  { 
+    longURL: "http://www.lindsaynwilhelm.xyz",
+    userID: "3C"
+    }
 };
 
 const users = {
@@ -44,6 +53,16 @@ const findUserByEmail = (email) => {
     return null;
 }
 
+const urlsForUser = (id, urlDatabase) => {
+    let userURL = {};
+    for (let url in urlDatabase) {
+        if (urlDatabase[url].userID === id) {
+            userURL[url] = urlDatabase[shortURL];
+        } 
+    }
+    return userURL;
+}
+
 // GET REQUESTS
 app.get("/", (req, res) => {
   res.send("Hello!");
@@ -55,7 +74,9 @@ app.get('/login', (req, res) => {
         email: req.body.email,
         password: req.body.password
     }
+
     res.render('urls_login', templateVars)
+    res.redirect('/urls')
 })
 
 app.get("/register", (req, res) => {
@@ -65,36 +86,41 @@ app.get("/register", (req, res) => {
         password: req.body.password
     }
     res.render('urls_register', templateVars)
+    res.redirect('/urls')
 })
 
 app.get("/urls", (req, res) => {
-    const templateVars = { 
-        user: users[req.cookies["user_id"]], 
-        urls: urlDatabase };
-    res.render("urls_index", templateVars);
+    const templateVars = {
+        urls: urlsForUser(req.cookies["user_id"], urlDatabase),
+        user: users[req.cookies["user_id"]]
+    }
+    if (!users[req.cookies["user_id"]]) {
+        res.send('please login or register before accessing this page')
+        res.redirect('/login')
+    } else if (urlDatabase[req.params.shortURL])
+        res.render("urls_index", templateVars);
 })
-
-app.get("/urls.json", (req, res) => {
-    res.json(urlDatabase);
-  });  
 
   app.get("/urls/new", (req, res) => {
     let templateVars = { user: users[req.cookies.user_id]  }
+    if (!req.cookies["user_id"]) {
+        res.redirect('/login')
+    }
     res.render("urls_new", templateVars);
   });
 
   app.get("/urls/:shortURL", (req, res) => {
     const templateVars = { 
         user: users[req.cookies["user_id"]],
-        shortURL: req.params.shortURL, 
+        shortURL: generateRandomString(),
         longURL: urlDatabase[req.params.shortURL] };
     res.render("urls_show", templateVars);
     
   });  
 
-  app.get("/u/:shortURL", (req, res) => {
-    const longURL = urlDatabase[req.params.shortURL];
-    res.redirect(longURL)
+  app.get("/u/:shortURL", (req, res) => {   
+    const longURL = urlDatabase[req.params.shortURL].longURL
+          res.redirect(longURL);
   })
 
 // POST REQUESTS
@@ -111,7 +137,7 @@ app.get("/urls.json", (req, res) => {
   })
 
   app.post("/urls/:id", (req, res) => {
-    const shortURL = req.params.id;
+    const shortURL = req.params.shortURL;
     urlDatabase[shortURL] = req.body.longURL;
     res.redirect(`/urls/${shortURL}`);
   })
