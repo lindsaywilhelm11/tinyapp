@@ -14,6 +14,10 @@
 
     <%- include('partials/_header') %>
 
+    <% if (!user) { %>
+        <p>Please <a href="/login">Login here</a> or <a href="/login">Register here</a></p>
+    <% } %>
+
     <main style="margin: 1em;">
       <h3>Create TinyURL</h3>
       <form class="form-inline" action="/urls" method="POST">
