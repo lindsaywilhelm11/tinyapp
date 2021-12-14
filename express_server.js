@@ -2,8 +2,9 @@ const express = require("express");
 const app = express();
 const PORT = 8080; // default port 8080
 const cookieSession = require('cookie-session');
+const bcrypt = require('bcryptjs');
 const bodyParser = require("body-parser");
-const { generateRandomString, newUser, findUserByEmail, urlsForUser, findPassword } = require('./helpers');
+const { generateRandomString, getUserByEmail, urlsForUser } = require('./helpers');
 
 app.use(bodyParser.urlencoded({extended: true}));
 
@@ -28,12 +29,12 @@ const users = {
   "userRandomID": {
     id: "userRandomID",
     email: "user@example.com",
-    password: "purple-monkey-dinosaur"
+    hashedPassword: bcrypt.hashSync("123", 10)
   },
   "user2RandomID": {
     id: "user2RandomID",
     email: "user2@example.com",
-    password: "dishwasher-funk"
+    hashedPassword: bcrypt.hashSync("123", 10)
   }
 };
 
@@ -42,11 +43,10 @@ const users = {
 // Logged in users can see urls
 app.get("/", (req, res) => {
   const user = req.session.user_id;
-  if (user) {
-    res.redirect('/urls');
-  } else {
+  if (!user) {
     res.redirect('/login');
   }
+  res.redirect('/urls');
 });
 
 // Shows registration page
@@ -67,10 +67,14 @@ app.get("/urls.json", (req, res) => {
 
 // Shows url page for user
 app.get("/urls", (req, res) => {
-  let templateVars = {
-    user: users[req.session.user_id],
-    urls: urlsForUser(req.session.user_id)
-  };
+  const id = req.session.user_id;
+  const user = users[id];
+  if (!user) {
+    res.status(403).send('401: Unauthorized: Please <a href="/login">login</a> or <a href="/register">register</a> to view these URLs!')
+  }
+
+  const urls = urlsForUser(id);
+  let templateVars = { user, urls };
   res.render("urls_index", templateVars);
 });
 
@@ -85,10 +89,11 @@ app.get("/urls/new", (req, res) => {
 
 
 app.get("/urls/:shortURL", (req, res) => {
+  const shortURL = req.params.shortURL;
   let templateVars = {
+    shortURL,
     user: users[req.session.user_id],
-    shortURL: req.params.shortURL,
-    longURL: urlDatabase[req.params.shortURL].longURL
+    longURL: urlDatabase[shortURL].longURL
   };
   if (!urlDatabase[templateVars.shortURL].userID === req.session.user_id) {
     res.status(403).send("403: Forbidden: You are not authorized to access this TinyURL!");
@@ -109,34 +114,50 @@ app.post("/register", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
   if (!email || !password) {
-    res.status(400).send('400 Bad Request: Invalid email or password!');
-  } else if (findUserByEmail(email)) {
-    res.status(400).send('400 Bad Request: A user has already registered under this email. Please use a different email or login.');
-  } else {
-    const userID = newUser(email, password);
-    req.session.user_id = userID;
-    res.redirect("/urls");
+    return res.status(400).send('400 Bad Request: Invalid email or password!');
+  } 
+
+  if (getUserByEmail(email)) {
+    return res.status(400).send('400 Bad Request: A user has already registered under this email. Please Please <a href="/login">login</a> or <a href="/register">register</a> with a different one!');
+  } 
+
+  const id = generateRandomString();
+  const hashedPassword = bcrypt.hashSync(password, 10);
+  const user = {
+    id,
+    email,
+    hashedPassword
   }
+  users[id] = user;
+  req.session.user_id = id;
+  res.redirect("/urls");
 });
 
 // Login authentication
 app.post("/login", (req,res) => {
-  const email = req.body.email;
-  const password = req.body.password;
-  const user = findUserByEmail(email);
-  if (!user) {
-    res.status(404).send("404 Not Found: User not found!");
-  } else if (!findPassword(users, password)) {
-    res.status(400).send("400 Bad Request: Invalid password!");
-  } else {
-    req.session.user_id = user.id;
-    res.redirect("/urls");
-  }
+const email = req.body.email;
+const password = req.body.password;
+const user = getUserByEmail(email);
+
+if (!email || !password) {
+    return res.status(400).send('400 Bad Request: Please fill out email or password inputs correctly!');
+}
+
+if (!user) {
+  return res.status(404).send('404 Unauthorized: User not found!')
+}
+
+if (!bcrypt.compareSync(password, user.hashedPassword)) {
+  return res.status(401).send('401 Unauthorized: User cannot be authenticated!')
+}
+
+req.session.user_id = user.id;
+res.redirect('/urls');
 });
   
 // Logout / Delete cookie session
 app.post("/logout", (req, res) => {
-  req.session.user_id = null;
+  delete req.session.user_id;
   res.redirect("/login");
 });
 
@@ -154,13 +175,18 @@ app.post("/urls", (req, res) => {
 
 //  Deletes URL if user is logged in
 app.post("/urls/:shortURL/delete", (req,res) => {
-  const shortURL = req.params.shortURL;
-  if (urlDatabase[shortURL].userID === req.session.user_id) {
-    delete urlDatabase[req.params.shortURL];
-    res.redirect("/urls");
-  } else {
-    res.status(403).send("403: Forbidden: You are not authorized to delete this!");
-  }
+  const shortUrl  = req.params.shortURL;
+  const user_id = req.session.user_id
+  if (!urlDatabase[shortUrl]) {
+    res.status(404).send('404 Not Found: Cannot find URL!');
+      return;
+    }
+  if (user_id !== urlDatabase[shortUrl].user_id) {
+    res.status(403).send('403 Forbidden: You are not authorized to delete this URL!' );    
+    return;
+    }
+  urlDatabase[shortUrl].longUrl = req.body.longUrl;
+  res.redirect(`/urls`)
 });
 
 //Logged in user can see and update URLs
