@@ -44,10 +44,10 @@ const getUserByEmail = function(email) {
   return null;
 };
   
-const urlsForUser = (id) => {
+const urlsForUser = (id, database) => {
   let result = {};
-  for (let shortURL in urlDatabase) {
-    const urlObj = urlDatabase[shortURL];
+  for (let shortURL in database) {
+    const urlObj = database[shortURL];
     if (urlObj.userID === id) {
         result[shortURL] = urlObj;
     }
