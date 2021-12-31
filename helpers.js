@@ -34,9 +34,9 @@ const generateRandomString = () => {
   return result;
 };
   
-const getUserByEmail = function(email) {
-    const userValues = Object.values(users);
-  for (const user of userValues) {
+const getUserByEmail = function(email, database) {
+    for (const value in database) {
+      const user = database[value];
     if (user.email === email) {
       return user;
     }

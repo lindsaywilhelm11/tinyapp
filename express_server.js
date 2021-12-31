@@ -105,7 +105,7 @@ app.post("/register", (req, res) => {
       return res.status(400).send('400 Bad Request: Invalid email or password!');
     } 
   
-    if (getUserByEmail(email)) {
+    if (getUserByEmail(email, users)) {
       return res.status(400).send('400 Bad Request: A user has already registered under this email. Please Please <a href="/login">login</a> or <a href="/register">register</a> with a different one!');
     } 
   
@@ -134,7 +134,7 @@ app.get("/login", (req, res) => {
 app.post("/login", (req,res) => {
     const email = req.body.email;
     const password = req.body.password;
-    const user = getUserByEmail(email);
+    const user = getUserByEmail(email, users);
     
     if (!email || !password) {
         return res.status(400).send('400 Bad Request: Please fill out email or password inputs correctly!');
